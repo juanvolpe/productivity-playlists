@@ -54,6 +54,14 @@ export default async function PlaylistDatePage({
               }
             }
           }
+        },
+        completions: {
+          where: {
+            date: {
+              gte: targetDate,
+              lt: nextDate
+            }
+          }
         }
       }
     });
@@ -93,7 +101,8 @@ export default async function PlaylistDatePage({
       tasks: playlist.tasks.map((task: { completions: any[]; } & Task) => ({
         ...task,
         isCompleted: task.completions.length > 0
-      }))
+      })),
+      completions: playlist.completions || []
     };
 
     // Debug transformed playlist

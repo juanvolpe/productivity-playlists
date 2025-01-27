@@ -182,24 +182,11 @@ export default function Home() {
           </div>
         ) : (
           playlists.map((playlist) => {
-            // Calculate completion status
-            const totalTasks = playlist.tasks.length;
-            const completedTasks = playlist.tasks.filter(task => 
-              task.completions && task.completions.length > 0
-            ).length;
-            
             console.log('Rendering playlist:', {
               id: playlist.id,
               name: playlist.name,
-              totalTasks,
-              completedTasks,
               isCompleted: playlist.isCompleted,
-              _debug: playlist._debug,
-              tasks: playlist.tasks.map(t => ({
-                id: t.id,
-                title: t.title,
-                completions: t.completions?.length
-              }))
+              _debug: playlist._debug
             });
 
             return (
