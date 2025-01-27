@@ -47,7 +47,7 @@ export interface PlaylistCompletion {
   createdAt: Date;
 }
 
-export type PlaylistCreateInput = Omit<PlaylistWithTasks, 'id' | 'createdAt' | 'updatedAt' | 'tasks'> & {
+export type PlaylistCreateInput = Omit<PlaylistWithTasks, 'id' | 'createdAt' | 'updatedAt' | 'tasks' | 'completions'> & {
   tasks: {
     create: Array<{
       title: string;
@@ -59,6 +59,11 @@ export type PlaylistCreateInput = Omit<PlaylistWithTasks, 'id' | 'createdAt' | '
           date: Date;
         }>;
       };
+    }>;
+  };
+  completions?: {
+    create: Array<{
+      date: Date;
     }>;
   };
 }; 

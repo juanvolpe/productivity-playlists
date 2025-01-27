@@ -105,11 +105,11 @@ export default function NewPlaylistPage() {
         saturday: activeDays.saturday,
         sunday: activeDays.sunday,
         tasks: {
-          create: tasks.map(task => ({
+          create: tasks.map((task, index) => ({
             title: task.title,
             duration: task.duration,
             isCompleted: false,
-            order: task.order
+            order: index + 1
           }))
         }
       };
