@@ -185,8 +185,15 @@ export default function Home() {
             console.log('Rendering playlist:', {
               id: playlist.id,
               name: playlist.name,
+              status: playlist.status,
               isCompleted: playlist.isCompleted,
-              _debug: playlist._debug
+              _debug: playlist._debug,
+              date: dateString,
+              tasks: playlist.tasks.map(t => ({
+                id: t.id,
+                title: t.title,
+                completionsCount: t.completions.length
+              }))
             });
 
             return (
@@ -204,9 +211,19 @@ export default function Home() {
                       <span className="text-sm text-gray-500">
                         {playlist.tasks.length} tasks
                       </span>
-                      {playlist.isCompleted && (
+                      {playlist.status === 'Completed' && (
                         <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
                           Completed
+                        </span>
+                      )}
+                      {playlist.status === 'In Progress' && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                          In Progress
+                        </span>
+                      )}
+                      {playlist.status === 'Not Started' && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">
+                          Not Started
                         </span>
                       )}
                     </div>

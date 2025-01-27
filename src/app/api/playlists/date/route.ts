@@ -30,58 +30,96 @@ export async function GET(request: Request) {
         tasks: {
           orderBy: {
             order: 'asc'
-          }
-        },
-        completions: {
-          where: {
-            date: {
-              gte: start,
-              lte: end
+          },
+          include: {
+            completions: {
+              where: {
+                date: {
+                  gte: start,
+                  lte: end
+                }
+              }
             }
           }
         }
       }
     });
 
-    logger.info('Processing playlists with completions');
-    const playlistsWithStatus = await Promise.all(playlists.map(async (playlist) => {
-      // Check for playlist completion on this specific date
-      const completion = await prisma.playlistCompletion.findFirst({
-        where: {
+    logger.info('Processing playlists with task completions');
+    const playlistsWithStatus = playlists.map((playlist) => {
+      // Log each task's completion status
+      playlist.tasks.forEach(task => {
+        logger.info('Task completion check:', {
           playlistId: playlist.id,
-          date: {
-            gte: start,
-            lte: end
-          }
-        }
+          taskId: task.id,
+          taskTitle: task.title,
+          isCompleted: task.isCompleted,
+          completionsCount: task.completions.length,
+          completions: task.completions.map(c => ({
+            id: c.id,
+            date: c.date.toISOString()
+          }))
+        });
       });
 
-      const isCompleted = completion !== null;
+      const totalTasks = playlist.tasks.length;
+      const completedTasks = playlist.tasks.filter(task => {
+        // A task is completed if either it has completions for today or isCompleted is true
+        const hasCompletion = task.completions.length > 0 || task.isCompleted;
+        logger.info('Task completion status:', {
+          taskId: task.id,
+          taskTitle: task.title,
+          isCompleted: task.isCompleted,
+          hasCompletion,
+          completionsCount: task.completions.length
+        });
+        return hasCompletion;
+      }).length;
       
-      logger.info('Playlist completion check:', {
+      let status = 'Not Started';
+      if (totalTasks > 0 && completedTasks === totalTasks) {
+        status = 'Completed';
+      } else if (completedTasks > 0) {
+        status = 'In Progress';
+      }
+
+      logger.info('Playlist status calculation:', {
         playlistId: playlist.id,
         playlistName: playlist.name,
         date: dateParam,
-        isCompleted,
-        completionId: completion?.id
+        totalTasks,
+        completedTasks,
+        status,
+        tasks: playlist.tasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          isCompleted: t.isCompleted,
+          completionsCount: t.completions.length
+        }))
       });
       
       return {
         ...playlist,
-        isCompleted,
+        status,
+        isCompleted: status === 'Completed',
         _debug: {
           date: dateParam,
-          isCompleted,
-          completionId: completion?.id
+          totalTasks,
+          completedTasks,
+          status,
+          taskCompletions: playlist.tasks.map(t => ({
+            taskId: t.id,
+            isCompleted: t.isCompleted,
+            completionsCount: t.completions.length
+          }))
         }
       };
-    }));
+    });
 
     logger.info('Returning playlists with status:', playlistsWithStatus.map(p => ({
       id: p.id,
       name: p.name,
-      isCompleted: p.isCompleted,
-      _debug: p._debug
+      isCompleted: p._debug
     })));
 
     return NextResponse.json(playlistsWithStatus);

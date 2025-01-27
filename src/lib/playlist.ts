@@ -15,9 +15,14 @@ export async function getTodaysPlaylists(): Promise<PlaylistWithTasks[]> {
     logger.info('Fetching today\'s playlists');
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const today = days[new Date().getDay()];
+    const todayDate = new Date();
+    const startOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+    
     logger.debug('Today is:', today);
 
-    const playlists = await prisma.playlist.findMany({
+    const prismaPlaylists = await prisma.playlist.findMany({
       where: {
         [today]: true
       },
@@ -27,10 +32,80 @@ export async function getTodaysPlaylists(): Promise<PlaylistWithTasks[]> {
             order: 'asc'
           },
           include: {
-            completions: true
+            completions: {
+              where: {
+                date: {
+                  gte: startOfDay,
+                  lt: endOfDay
+                }
+              }
+            }
+          }
+        },
+        completions: {
+          where: {
+            date: {
+              gte: startOfDay,
+              lt: endOfDay
+            }
           }
         }
       }
+    });
+
+    const playlists: PlaylistWithTasks[] = prismaPlaylists.map(playlist => {
+      const totalTasks = playlist.tasks.length;
+      const completedTasks = playlist.tasks.filter(task => 
+        task.completions.length > 0 || task.isCompleted
+      ).length;
+
+      logger.info('Playlist completion status:', {
+        playlistId: playlist.id,
+        playlistName: playlist.name,
+        totalTasks,
+        completedTasks,
+        taskCompletions: playlist.tasks.map(t => ({
+          taskId: t.id,
+          title: t.title,
+          completionsCount: t.completions.length,
+          isCompleted: t.isCompleted
+        }))
+      });
+
+      let status: 'Not Started' | 'Completed' | 'In Progress' = 'Not Started';
+      if (totalTasks > 0 && completedTasks === totalTasks) {
+        status = 'Completed';
+      } else if (completedTasks > 0) {
+        status = 'In Progress';
+      }
+
+      return {
+        id: playlist.id,
+        name: playlist.name,
+        monday: playlist.monday,
+        tuesday: playlist.tuesday,
+        wednesday: playlist.wednesday,
+        thursday: playlist.thursday,
+        friday: playlist.friday,
+        saturday: playlist.saturday,
+        sunday: playlist.sunday,
+        createdAt: playlist.createdAt,
+        updatedAt: playlist.updatedAt,
+        status,
+        isCompleted: status === 'Completed',
+        tasks: playlist.tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          duration: task.duration,
+          isCompleted: task.isCompleted,
+          order: task.order,
+          playlistId: task.playlistId,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          completions: task.completions
+        })),
+        completions: playlist.completions
+      };
     });
 
     logger.info(`Found ${playlists.length} playlists for today`);
@@ -43,7 +118,7 @@ export async function getTodaysPlaylists(): Promise<PlaylistWithTasks[]> {
 
 export async function getAllPlaylists(): Promise<PlaylistWithTasks[]> {
   try {
-    return await prisma.playlist.findMany({
+    const prismaPlaylists = await prisma.playlist.findMany({
       include: {
         tasks: {
           orderBy: {
@@ -52,8 +127,51 @@ export async function getAllPlaylists(): Promise<PlaylistWithTasks[]> {
           include: {
             completions: true
           }
-        }
+        },
+        completions: true
       }
+    });
+
+    return prismaPlaylists.map(playlist => {
+      const totalTasks = playlist.tasks.length;
+      const completedTasks = playlist.tasks.filter(task => 
+        task.completions.length > 0 || task.isCompleted
+      ).length;
+
+      let status: 'Not Started' | 'Completed' | 'In Progress' = 'Not Started';
+      if (totalTasks > 0 && completedTasks === totalTasks) {
+        status = 'Completed';
+      } else if (completedTasks > 0) {
+        status = 'In Progress';
+      }
+
+      return {
+        id: playlist.id,
+        name: playlist.name,
+        monday: playlist.monday,
+        tuesday: playlist.tuesday,
+        wednesday: playlist.wednesday,
+        thursday: playlist.thursday,
+        friday: playlist.friday,
+        saturday: playlist.saturday,
+        sunday: playlist.sunday,
+        createdAt: playlist.createdAt,
+        updatedAt: playlist.updatedAt,
+        status,
+        isCompleted: status === 'Completed',
+        tasks: playlist.tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          duration: task.duration,
+          isCompleted: task.isCompleted,
+          order: task.order,
+          playlistId: task.playlistId,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          completions: task.completions
+        })),
+        completions: playlist.completions
+      };
     });
   } catch (error) {
     console.error('Failed to fetch all playlists:', error);
@@ -61,9 +179,21 @@ export async function getAllPlaylists(): Promise<PlaylistWithTasks[]> {
   }
 }
 
-export async function getPlaylistById(id: string): Promise<PlaylistWithTasks | null> {
+export async function getPlaylistById(id: string, date?: string): Promise<PlaylistWithTasks | null> {
   try {
-    const playlist = await prisma.playlist.findUnique({
+    let startOfDay: Date;
+    let endOfDay: Date;
+
+    if (date) {
+      startOfDay = new Date(date);
+    } else {
+      const today = new Date();
+      startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    }
+    endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    const prismaPlaylist = await prisma.playlist.findUnique({
       where: { id },
       include: {
         tasks: {
@@ -71,17 +201,84 @@ export async function getPlaylistById(id: string): Promise<PlaylistWithTasks | n
             order: 'asc'
           },
           include: {
-            completions: true
+            completions: {
+              where: {
+                date: {
+                  gte: startOfDay,
+                  lt: endOfDay
+                }
+              }
+            }
+          }
+        },
+        completions: {
+          where: {
+            date: {
+              gte: startOfDay,
+              lt: endOfDay
+            }
           }
         }
       }
     });
 
-    if (!playlist) {
+    if (!prismaPlaylist) {
       throw new PlaylistError('Playlist not found', 'NOT_FOUND');
     }
 
-    return playlist;
+    const totalTasks = prismaPlaylist.tasks.length;
+    const completedTasks = prismaPlaylist.tasks.filter(task => 
+      task.completions.length > 0 || task.isCompleted
+    ).length;
+
+    logger.info('Playlist completion status:', {
+      playlistId: prismaPlaylist.id,
+      playlistName: prismaPlaylist.name,
+      date: startOfDay.toISOString(),
+      totalTasks,
+      completedTasks,
+      taskCompletions: prismaPlaylist.tasks.map(t => ({
+        taskId: t.id,
+        title: t.title,
+        completionsCount: t.completions.length,
+        isCompleted: t.isCompleted
+      }))
+    });
+
+    let status: 'Not Started' | 'Completed' | 'In Progress' = 'Not Started';
+    if (totalTasks > 0 && completedTasks === totalTasks) {
+      status = 'Completed';
+    } else if (completedTasks > 0) {
+      status = 'In Progress';
+    }
+
+    return {
+      id: prismaPlaylist.id,
+      name: prismaPlaylist.name,
+      monday: prismaPlaylist.monday,
+      tuesday: prismaPlaylist.tuesday,
+      wednesday: prismaPlaylist.wednesday,
+      thursday: prismaPlaylist.thursday,
+      friday: prismaPlaylist.friday,
+      saturday: prismaPlaylist.saturday,
+      sunday: prismaPlaylist.sunday,
+      createdAt: prismaPlaylist.createdAt,
+      updatedAt: prismaPlaylist.updatedAt,
+      status,
+      isCompleted: status === 'Completed',
+      tasks: prismaPlaylist.tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        duration: task.duration,
+        isCompleted: task.isCompleted,
+        order: task.order,
+        playlistId: task.playlistId,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        completions: task.completions
+      })),
+      completions: prismaPlaylist.completions
+    };
   } catch (error) {
     if (error instanceof PlaylistError) throw error;
     console.error('Failed to fetch playlist:', error);
@@ -91,7 +288,7 @@ export async function getPlaylistById(id: string): Promise<PlaylistWithTasks | n
 
 export async function createPlaylist(data: PlaylistCreateInput): Promise<PlaylistWithTasks> {
   try {
-    const playlist = await prisma.playlist.create({
+    const prismaPlaylist = await prisma.playlist.create({
       data: {
         name: data.name,
         monday: data.monday,
@@ -115,16 +312,50 @@ export async function createPlaylist(data: PlaylistCreateInput): Promise<Playlis
           include: {
             completions: true
           }
-        }
+        },
+        completions: true
       }
     });
 
+    // Calculate status for the newly created playlist
+    const totalTasks = prismaPlaylist.tasks.length;
+    const completedTasks = prismaPlaylist.tasks.filter(task => 
+      task.completions.length > 0 || task.isCompleted
+    ).length;
+
+    let status: 'Not Started' | 'Completed' | 'In Progress' = 'Not Started';
+    if (totalTasks > 0 && completedTasks === totalTasks) {
+      status = 'Completed';
+    } else if (completedTasks > 0) {
+      status = 'In Progress';
+    }
+
     return {
-      ...playlist,
-      tasks: playlist.tasks.map((task: { completions?: TaskCompletion[] } & Task) => ({
-        ...task,
-        completions: task.completions || []
-      }))
+      id: prismaPlaylist.id,
+      name: prismaPlaylist.name,
+      monday: prismaPlaylist.monday,
+      tuesday: prismaPlaylist.tuesday,
+      wednesday: prismaPlaylist.wednesday,
+      thursday: prismaPlaylist.thursday,
+      friday: prismaPlaylist.friday,
+      saturday: prismaPlaylist.saturday,
+      sunday: prismaPlaylist.sunday,
+      createdAt: prismaPlaylist.createdAt,
+      updatedAt: prismaPlaylist.updatedAt,
+      status,
+      isCompleted: status === 'Completed',
+      tasks: prismaPlaylist.tasks.map(task => ({
+        id: task.id,
+        title: task.title,
+        duration: task.duration,
+        isCompleted: task.isCompleted,
+        order: task.order,
+        playlistId: task.playlistId,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        completions: task.completions
+      })),
+      completions: prismaPlaylist.completions
     };
   } catch (error) {
     console.error('Failed to create playlist:', error);

@@ -31,12 +31,14 @@ export interface PlaylistWithTasks {
   createdAt: Date;
   updatedAt: Date;
   isCompleted?: boolean;
+  status?: 'Completed' | 'In Progress' | 'Not Started';
   completions: PlaylistCompletion[];
   _debug?: {
     totalTasks: number;
     completedTasks: number;
     completedTaskIds: string[];
     date: string;
+    status?: string;
   };
 }
 
