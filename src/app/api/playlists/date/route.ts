@@ -44,33 +44,44 @@ export async function GET(request: Request) {
     });
 
     logger.info('Processing playlists with completions');
-    const playlistsWithStatus = playlists.map(playlist => {
-      const hasCompletion = playlist.completions.length > 0;
+    const playlistsWithStatus = await Promise.all(playlists.map(async (playlist) => {
+      // Check for playlist completion on this specific date
+      const completion = await prisma.playlistCompletion.findFirst({
+        where: {
+          playlistId: playlist.id,
+          date: {
+            gte: start,
+            lte: end
+          }
+        }
+      });
+
+      const isCompleted = completion !== null;
       
       logger.info('Playlist completion check:', {
         playlistId: playlist.id,
         playlistName: playlist.name,
-        completionsCount: playlist.completions.length,
-        hasCompletion,
-        date: dateParam
+        date: dateParam,
+        isCompleted,
+        completionId: completion?.id
       });
       
       return {
         ...playlist,
-        isCompleted: hasCompletion,
+        isCompleted,
         _debug: {
-          completionsCount: playlist.completions.length,
           date: dateParam,
-          hasCompletion
+          isCompleted,
+          completionId: completion?.id
         }
       };
-    });
+    }));
 
     logger.info('Returning playlists with status:', playlistsWithStatus.map(p => ({
       id: p.id,
       name: p.name,
       isCompleted: p.isCompleted,
-      completionsCount: p._debug?.completionsCount
+      _debug: p._debug
     })));
 
     return NextResponse.json(playlistsWithStatus);
