@@ -167,18 +167,6 @@ export default function PlaylistsClient({ initialPlaylists }: PlaylistsClientPro
           </div>
         ) : (
           playlists.map((playlist) => {
-            // Calculate completion status
-            const completedTasks = playlist.tasks.filter(task => 
-              Array.isArray(task.completions) && task.completions.length > 0
-            ).length;
-            const totalTasks = playlist.tasks.length;
-            let status = "Not Started";
-            if (completedTasks === totalTasks && totalTasks > 0) {
-              status = "Completed";
-            } else if (completedTasks > 0) {
-              status = "In Progress";
-            }
-
             return (
               <div
                 key={playlist.id}
@@ -195,9 +183,6 @@ export default function PlaylistsClient({ initialPlaylists }: PlaylistsClientPro
                     <div className="mt-1 flex items-center gap-2">
                       <span className="text-sm text-gray-500">
                         {playlist.tasks.length} tasks
-                      </span>
-                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100">
-                        {status}
                       </span>
                     </div>
                   </div>
