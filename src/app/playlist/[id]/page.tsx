@@ -43,6 +43,14 @@ export default async function PlaylistPage({
               }
             }
           }
+        },
+        completions: {
+          where: {
+            date: {
+              gte: today,
+              lt: tomorrow
+            }
+          }
         }
       }
     });
@@ -58,7 +66,8 @@ export default async function PlaylistPage({
       tasks: playlist.tasks.map((task: { completions: any[]; } & Task) => ({
         ...task,
         isCompleted: task.completions.length > 0
-      }))
+      })),
+      completions: playlist.completions || []
     };
 
     logger.info('Playlist loaded successfully:', playlist.name);
