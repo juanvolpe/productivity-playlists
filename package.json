@@ -1,0 +1,38 @@
+{
+  "name": "productivity-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/check-env.js && prisma generate && prisma db push --accept-data-loss && next build",
+    "start": "next start -p $PORT",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "migrate:deploy": "prisma migrate deploy",
+    "test:db": "prisma db push --preview-feature && node scripts/test-db-connection.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "@thisbeyond/solid-dnd": "^0.7.5",
+    "date-fns": "^4.1.0",
+    "next": "14.0.4",
+    "prisma": "^5.7.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.46",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
