@@ -186,8 +186,11 @@ export default function Home() {
               id: playlist.id,
               name: playlist.name,
               isCompleted: playlist.isCompleted,
-              _debug: playlist._debug
+              _debug: playlist._debug,
+              completions: playlist.completions
             });
+
+            const showCompletedBadge = playlist.isCompleted || (playlist.completions && playlist.completions.length > 0);
 
             return (
               <a
@@ -204,7 +207,7 @@ export default function Home() {
                       <span className="text-sm text-gray-500">
                         {playlist.tasks.length} tasks
                       </span>
-                      {playlist.isCompleted && (
+                      {showCompletedBadge && (
                         <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
                           Completed
                         </span>
