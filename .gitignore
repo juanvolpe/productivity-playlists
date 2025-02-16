@@ -23,8 +23,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
 .env*.local
+.env
 .env.production
 
 # vercel
@@ -34,8 +34,25 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# iOS
+ios/App/build/
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/config.xml
+ios/DerivedData/
+ios/xcuserdata/
+
+# Capacitor
+ios/capacitor-cordova-ios-plugins/
+
 # IDE
+.idea/
 .vscode/
-.idea/ .env
-.env
-.env
+*.swp
+*.swo
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db

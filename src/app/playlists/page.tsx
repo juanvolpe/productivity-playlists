@@ -29,13 +29,23 @@ export default async function PlaylistsPage() {
     const serializedPlaylists = JSON.parse(JSON.stringify(playlists));
     
     return (
-      <>
-        <PlaylistsClient initialPlaylists={serializedPlaylists} />
-        <StatsWrapper />
-      </>
+      <div className="h-[calc(100vh-4rem)] bg-gray-50 flex flex-col p-4">
+        <div className="flex-1 grid grid-rows-[3fr_2fr] gap-4 min-h-0">
+          <div className="bg-white overflow-hidden rounded-lg min-h-0 shadow-md border border-gray-100">
+            <PlaylistsClient initialPlaylists={serializedPlaylists} />
+          </div>
+          <div className="bg-white overflow-hidden rounded-lg min-h-0 shadow-md border border-gray-100">
+            <StatsWrapper />
+          </div>
+        </div>
+      </div>
     );
   } catch (error) {
-    logger.error('Failed to fetch playlists:', error);
+    logger.error('Failed to fetch playlists:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      type: error?.constructor?.name
+    });
     throw new Error('Failed to load playlists. Please try again later.');
   }
 } 

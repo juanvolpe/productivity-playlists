@@ -7,6 +7,29 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get('date');
+
+    if (!date) {
+      return NextResponse.json(
+        { error: 'Date parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    // Extract just the date part (YYYY-MM-DD)
+    const dateString = date.split('T')[0];
+    const targetDate = new Date(dateString);
+    // Reset the time to midnight in the local timezone
+    targetDate.setHours(0, 0, 0, 0);
+
+    logger.info('Fetching playlist with date:', {
+      inputDate: date,
+      dateString,
+      targetDate: targetDate.toISOString(),
+      localDate: targetDate.toLocaleDateString(),
+    });
+
     const playlist = await prisma.playlist.findUnique({
       where: { id: params.id },
       include: {
@@ -15,20 +38,53 @@ export async function GET(
             order: 'asc'
           },
           include: {
-            completions: true
+            completions: {
+              where: {
+                date: targetDate
+              }
+            }
+          }
+        },
+        completions: {
+          where: {
+            date: targetDate
           }
         }
       }
     });
 
     if (!playlist) {
-      return new NextResponse('Playlist not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Playlist not found' },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(playlist);
+    // Transform tasks to include isCompleted based on target date's completions
+    const transformedPlaylist = {
+      ...playlist,
+      tasks: playlist.tasks.map(task => ({
+        ...task,
+        isCompleted: task.completions.length > 0
+      })),
+      completions: playlist.completions || []
+    };
+
+    logger.info('Transformed playlist:', {
+      playlistId: params.id,
+      date: dateString,
+      taskCount: transformedPlaylist.tasks.length,
+      completedTasks: transformedPlaylist.tasks.filter(t => t.isCompleted).length,
+      hasPlaylistCompletion: transformedPlaylist.completions.length > 0
+    });
+
+    return NextResponse.json(transformedPlaylist);
   } catch (error) {
     logger.error('Failed to fetch playlist:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch playlist' },
+      { status: 500 }
+    );
   }
 }
 
@@ -37,20 +93,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    logger.info('Deleting playlist:', params.id);
-    
-    // First delete all tasks associated with the playlist
-    await prisma.task.deleteMany({
-      where: { playlistId: params.id }
+    const playlistId = params.id;
+
+    const deletedPlaylist = await prisma.playlist.delete({
+      where: { id: playlistId },
     });
 
-    // Then delete the playlist
-    await prisma.playlist.delete({
-      where: { id: params.id }
+    logger.info('Deleted playlist:', {
+      playlistId,
+      name: deletedPlaylist.name,
     });
 
-    logger.info('Playlist deleted successfully:', params.id);
-    return NextResponse.json({ message: 'Playlist deleted successfully' });
+    return NextResponse.json(deletedPlaylist);
   } catch (error) {
     logger.error('Failed to delete playlist:', error);
     return NextResponse.json(
@@ -65,58 +119,82 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const data = await request.json();
-    const { tasks, ...playlistData } = data;
+    const { name, tasks, ...activeDays } = await request.json();
+    const playlistId = params.id;
 
-    // Update playlist
-    const updatedPlaylist = await prisma.playlist.update({
-      where: { id: params.id },
-      data: {
-        ...playlistData,
-        tasks: {
-          // Delete tasks that are not in the updated list
-          deleteMany: {
-            playlistId: params.id,
-            id: {
-              notIn: tasks
-                .filter((task: any) => task.id && !task.id.startsWith('temp-'))
-                .map((task: any) => task.id),
-            },
+    // Update playlist and tasks in a transaction
+    const updatedPlaylist = await prisma.$transaction(async (tx) => {
+      // Update playlist
+      const playlist = await tx.playlist.update({
+        where: { id: playlistId },
+        data: {
+          name,
+          ...activeDays,
+        },
+      });
+
+      // Delete tasks that are not in the new list
+      const existingTasks = await tx.task.findMany({
+        where: { playlistId },
+        select: { id: true },
+      });
+
+      const existingTaskIds = existingTasks.map(t => t.id);
+      const newTaskIds = tasks
+        .filter((t: any) => t.id && !t.id.startsWith('new-task-'))
+        .map((t: any) => t.id);
+
+      const tasksToDelete = existingTaskIds.filter(id => !newTaskIds.includes(id));
+
+      if (tasksToDelete.length > 0) {
+        await tx.task.deleteMany({
+          where: {
+            id: { in: tasksToDelete },
           },
-          // Update existing tasks
-          update: tasks
-            .filter((task: any) => task.id && !task.id.startsWith('temp-'))
-            .map((task: any) => ({
-              where: { id: task.id },
-              data: {
-                title: task.title,
-                duration: task.duration,
-                order: task.order,
-              },
-            })),
-          // Create new tasks
-          create: tasks
-            .filter((task: any) => !task.id || task.id.startsWith('temp-'))
-            .map((task: any) => ({
+        });
+      }
+
+      // Update or create tasks
+      for (const task of tasks) {
+        if (task.id && !task.id.startsWith('new-task-')) {
+          // Update existing task
+          await tx.task.update({
+            where: { id: task.id },
+            data: {
               title: task.title,
               duration: task.duration,
               order: task.order,
+            },
+          });
+        } else {
+          // Create new task
+          await tx.task.create({
+            data: {
+              title: task.title,
+              duration: task.duration,
+              order: task.order,
+              playlistId,
               isCompleted: false,
-            })),
-        },
-      },
-      include: {
-        tasks: {
-          orderBy: {
-            order: 'asc'
-          }
+            },
+          });
         }
       }
+
+      return playlist;
+    });
+
+    logger.info('Updated playlist:', {
+      playlistId,
+      name: updatedPlaylist.name,
+      taskCount: tasks.length,
     });
 
     return NextResponse.json(updatedPlaylist);
   } catch (error) {
     logger.error('Failed to update playlist:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update playlist' },
+      { status: 500 }
+    );
   }
 } 

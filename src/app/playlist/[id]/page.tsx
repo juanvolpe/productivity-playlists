@@ -108,7 +108,8 @@ export default async function PlaylistPage({
         <main className="max-w-4xl mx-auto p-4">
           <PlaylistTimer 
             playlist={playlist} 
-            date={new Date().toISOString().split('T')[0]} 
+            date={new Date().toISOString().split('T')[0]}
+            onTaskComplete={() => {}}
           />
         </main>
       </div>

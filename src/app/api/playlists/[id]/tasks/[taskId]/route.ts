@@ -16,18 +16,30 @@ export async function PATCH(
       );
     }
 
-    // Parse the target date
-    const targetDate = new Date(date);
+    // Extract just the date part (YYYY-MM-DD)
+    const dateString = date.split('T')[0];
+    const targetDate = new Date(dateString);
+    // Reset the time to midnight in the local timezone
     targetDate.setHours(0, 0, 0, 0);
-    
-    // Get next day for date range query
-    const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
+
+    logger.info('Task completion date handling:', {
+      inputDate: date,
+      dateString,
+      targetDate: targetDate.toISOString(),
+      localDate: targetDate.toLocaleDateString(),
+    });
 
     if (isCompleted) {
       // Create a completion record for the specific date
-      await prisma.taskCompletion.create({
-        data: {
+      await prisma.taskCompletion.upsert({
+        where: {
+          taskId_date: {
+            taskId: params.taskId,
+            date: targetDate,
+          },
+        },
+        update: {},
+        create: {
           taskId: params.taskId,
           date: targetDate,
         },
@@ -37,10 +49,7 @@ export async function PATCH(
       await prisma.taskCompletion.deleteMany({
         where: {
           taskId: params.taskId,
-          date: {
-            gte: targetDate,
-            lt: nextDate
-          }
+          date: targetDate,
         },
       });
     }

@@ -75,8 +75,18 @@ export default function PlaylistsClient({ initialPlaylists }: PlaylistsClientPro
         }
       }
 
+      // Give the server a moment to update its state
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Refresh the page to show updated state
       router.refresh();
+      
+      // Refresh the stats after a short delay to ensure the server has updated
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).refreshPlaylistStats) {
+          (window as any).refreshPlaylistStats();
+        }
+      }, 200);
     } catch (error) {
       console.error('Failed to cleanup tasks:', error);
       alert('Failed to cleanup tasks. Please try again.');
@@ -115,97 +125,113 @@ export default function PlaylistsClient({ initialPlaylists }: PlaylistsClientPro
     }
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dateString = today.toISOString().split('T')[0];
-
   return (
-    <main className="p-8 max-w-4xl mx-auto">
-      <h1 className="page-title mb-4">Manage Playlists</h1>
-      <div className="flex gap-4 mb-8 w-full">
-        <a
-          href="/playlists/new"
-          className="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 text-center"
-        >
-          Create Playlist
-        </a>
-        <button
-          onClick={handleCleanup}
-          disabled={isCleaningUp}
-          className={`w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 ${
-            isCleaningUp ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          {isCleaningUp ? 'Cleaning...' : 'Clean Up All'}
-        </button>
-        <button
-          onClick={handleDeleteAll}
-          className="w-full bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 text-center"
-        >
-          Delete All
-        </button>
+    <div className="h-full flex flex-col">
+      <div className="bg-white p-4 border-b border-gray-100">
+        <h1 className="text-xl font-poppins font-bold text-text-primary">Your Playlists</h1>
+        <div className="flex items-center gap-2 mt-4">
+          <Link
+            href="/playlists/new"
+            className="inline-flex items-center px-4 py-2 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors shadow-sm"
+          >
+            <svg 
+              className="w-3.5 h-3.5 mr-1.5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 4v16m8-8H4" 
+              />
+            </svg>
+            Create New
+          </Link>
+          <button
+            onClick={handleCleanup}
+            disabled={isCleaningUp}
+            className="inline-flex items-center px-4 py-2 text-xs font-medium text-text-secondary bg-white border border-gray-200 rounded-md hover:border-accent hover:text-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors disabled:opacity-50 shadow-sm"
+          >
+            <svg 
+              className="w-3.5 h-3.5 mr-1.5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+              />
+            </svg>
+            {isCleaningUp ? 'Cleaning...' : 'Cleanup Old'}
+          </button>
+          <button
+            onClick={handleDeleteAll}
+            className="inline-flex items-center px-4 py-2 text-xs font-medium text-red-500 bg-white border border-gray-200 rounded-md hover:text-red-600 hover:border-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-100 transition-colors shadow-sm"
+          >
+            <svg 
+              className="w-3.5 h-3.5 mr-1.5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+              />
+            </svg>
+            Delete All
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {playlists.length === 0 ? (
-          <div className="card text-center py-12">
-            <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 9l-7 7-7-7"/>
-              </svg>
-            </div>
-            <p className="text-gray-600 mb-4">No playlists yet</p>
-            <a
-              href="/playlists/new"
-              className="text-indigo-500 hover:text-indigo-600 font-medium inline-flex items-center gap-2"
+      <div className="mt-4 flex-1 overflow-y-auto">
+        <div className="space-y-3 px-4">
+          {playlists.map((playlist) => (
+            <div
+              key={playlist.id}
+              className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:border-accent hover:shadow-md transition-all"
             >
-              <span>Create your first playlist</span>
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
-              </svg>
-            </a>
-          </div>
-        ) : (
-          playlists.map((playlist) => {
-            return (
-              <div
-                key={playlist.id}
-                className="bg-white rounded-lg shadow p-4"
-              >
-                <div className="flex justify-between items-center gap-4">
-                  <div className="min-w-0 flex-1">
-                    <a
-                      href={`/playlist/${playlist.id}/${dateString}`}
-                      className="text-lg font-medium text-gray-900 hover:text-blue-500 block truncate"
-                    >
-                      {playlist.name}
-                    </a>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-sm text-gray-500">
-                        {playlist.tasks.length} tasks
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={`/playlists/edit/${playlist.id}`}
-                      className="text-gray-500 hover:text-blue-500"
-                    >
-                      Edit
-                    </a>
-                    <button
-                      onClick={() => handleDelete(playlist.id)}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-sm font-poppins font-medium text-text-primary">{playlist.name}</h2>
+                <span className="text-xs text-text-secondary">({playlist.tasks.length} tasks)</span>
               </div>
-            );
-          })
-        )}
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/playlists/${playlist.id}`}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-accent rounded-md hover:bg-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors shadow-sm"
+                >
+                  View & Edit
+                </Link>
+                <button
+                  onClick={() => handleDelete(playlist.id)}
+                  className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                >
+                  <svg 
+                    className="w-4 h-4" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </main>
+    </div>
   );
 } 

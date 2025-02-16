@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { startOfDay, endOfDay } from 'date-fns';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: Request) {
@@ -16,15 +15,19 @@ export async function GET(request: Request) {
       );
     }
 
-    const date = new Date(dateParam);
-    const start = startOfDay(date);
-    const end = endOfDay(date);
+    // Create a date object for the target date
+    const targetDate = new Date(dateParam);
+    targetDate.setHours(0, 0, 0, 0);
 
-    logger.info('Fetching playlists for:', { date: date.toISOString(), day: date.getDay() });
+    logger.info('Query date:', { 
+      dateParam,
+      targetDate: targetDate.toISOString(),
+      localString: targetDate.toString()
+    });
 
     const playlists = await prisma.playlist.findMany({
       where: {
-        [['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()]]: true
+        [['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][targetDate.getDay()]]: true
       },
       include: {
         tasks: {
@@ -34,53 +37,56 @@ export async function GET(request: Request) {
           include: {
             completions: {
               where: {
-                date: {
-                  gte: start,
-                  lte: end
-                }
+                date: targetDate
               }
             }
+          }
+        },
+        completions: {
+          where: {
+            date: targetDate
           }
         }
       }
     });
 
-    logger.info('Processing playlists with task completions');
+    logger.info('Found playlists:', {
+      count: playlists.length,
+      playlists: playlists.map(p => ({
+        id: p.id,
+        name: p.name,
+        taskCount: p.tasks.length,
+        completionsCount: p.completions.length,
+        completionDates: p.completions.map(c => c.date.toISOString())
+      }))
+    });
+
     const playlistsWithStatus = playlists.map((playlist) => {
       // Log each task's completion status
       playlist.tasks.forEach(task => {
         logger.info('Task completion check:', {
           playlistId: playlist.id,
+          playlistName: playlist.name,
           taskId: task.id,
           taskTitle: task.title,
-          isCompleted: task.isCompleted,
           completionsCount: task.completions.length,
-          completions: task.completions.map(c => ({
-            id: c.id,
-            date: c.date.toISOString()
-          }))
+          completionDates: task.completions.map(c => c.date.toISOString())
         });
       });
 
       const totalTasks = playlist.tasks.length;
-      const completedTasks = playlist.tasks.filter(task => {
-        // A task is completed if either it has completions for today or isCompleted is true
-        const hasCompletion = task.completions.length > 0 || task.isCompleted;
-        logger.info('Task completion status:', {
-          taskId: task.id,
-          taskTitle: task.title,
-          isCompleted: task.isCompleted,
-          hasCompletion,
-          completionsCount: task.completions.length
-        });
-        return hasCompletion;
-      }).length;
+      const completedTasks = playlist.tasks.filter(task => task.completions.length > 0).length;
+      const hasPlaylistCompletion = playlist.completions.length > 0;
       
       let status = 'Not Started';
-      if (totalTasks > 0 && completedTasks === totalTasks) {
+      if (hasPlaylistCompletion) {
         status = 'Completed';
       } else if (completedTasks > 0) {
-        status = 'In Progress';
+        if (completedTasks === totalTasks) {
+          status = 'Completed';
+        } else {
+          status = 'In Progress';
+        }
       }
 
       logger.info('Playlist status calculation:', {
@@ -89,13 +95,9 @@ export async function GET(request: Request) {
         date: dateParam,
         totalTasks,
         completedTasks,
-        status,
-        tasks: playlist.tasks.map(t => ({
-          id: t.id,
-          title: t.title,
-          isCompleted: t.isCompleted,
-          completionsCount: t.completions.length
-        }))
+        hasPlaylistCompletion,
+        completionDates: playlist.completions.map(c => c.date.toISOString()),
+        status
       });
       
       return {
@@ -106,20 +108,19 @@ export async function GET(request: Request) {
           date: dateParam,
           totalTasks,
           completedTasks,
-          status,
-          taskCompletions: playlist.tasks.map(t => ({
-            taskId: t.id,
-            isCompleted: t.isCompleted,
-            completionsCount: t.completions.length
-          }))
+          hasPlaylistCompletion,
+          completionDates: playlist.completions.map(c => c.date.toISOString()),
+          status
         }
       };
     });
 
-    logger.info('Returning playlists with status:', playlistsWithStatus.map(p => ({
+    logger.info('Final playlist statuses:', playlistsWithStatus.map(p => ({
       id: p.id,
       name: p.name,
-      isCompleted: p._debug
+      status: p.status,
+      isCompleted: p.isCompleted,
+      debug: p._debug
     })));
 
     return NextResponse.json(playlistsWithStatus);

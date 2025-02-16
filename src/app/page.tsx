@@ -114,7 +114,7 @@ export default function Home() {
         <div className="flex items-center justify-center gap-8 mb-8">
           <button
             onClick={() => changeDate(-1)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-text-secondary hover:text-primary transition-colors"
             aria-label="Previous Day"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,12 +122,12 @@ export default function Home() {
             </svg>
           </button>
           <div className="text-center">
-            <h2 className="page-title mb-2 text-4xl">{dayName}</h2>
-            <p className="subtitle text-xl">{shortDate}</p>
+            <h2 className="font-poppins font-bold mb-2 text-4xl text-text-primary">{dayName}</h2>
+            <p className="text-xl text-text-secondary font-pt-sans">{shortDate}</p>
             {!isToday && (
               <button
                 onClick={() => setSelectedDate(new Date())}
-                className="mt-2 text-sm text-indigo-500 hover:text-indigo-600"
+                className="mt-2 text-sm text-accent hover:text-primary transition-colors font-medium"
               >
                 Back to Today
               </button>
@@ -135,7 +135,7 @@ export default function Home() {
           </div>
           <button
             onClick={() => changeDate(1)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-text-secondary hover:text-primary transition-colors"
             aria-label="Next Day"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,15 +147,15 @@ export default function Home() {
       </div>
 
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">
+        <h1 className="text-2xl font-poppins font-bold text-text-primary">
           {isToday ? "Today's Playlists" : "Playlists"}
         </h1>
         <button
           onClick={() => window.location.href = '/playlists/new'}
-          className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+          className="w-10 h-10 rounded-full bg-accent hover:bg-primary flex items-center justify-center transition-colors text-white shadow-sm"
           title="Create Playlist"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
@@ -163,16 +163,16 @@ export default function Home() {
       
       <div className="space-y-4">
         {playlists.length === 0 ? (
-          <div className="card text-center py-12">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm text-center py-12">
             <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="mx-auto h-12 w-12 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 9l-7 7-7-7"/>
               </svg>
             </div>
-            <p className="text-gray-600 mb-4">No playlists scheduled for {dayName}</p>
+            <p className="text-text-secondary mb-4">No playlists scheduled for {dayName}</p>
             <a
               href="/playlists/new"
-              className="text-indigo-500 hover:text-indigo-600 font-medium inline-flex items-center gap-2"
+              className="text-accent hover:text-primary font-medium inline-flex items-center gap-2 transition-colors"
             >
               <span>Create your first playlist</span>
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -181,62 +181,46 @@ export default function Home() {
             </a>
           </div>
         ) : (
-          playlists.map((playlist) => {
-            console.log('Rendering playlist:', {
-              id: playlist.id,
-              name: playlist.name,
-              status: playlist.status,
-              isCompleted: playlist.isCompleted,
-              _debug: playlist._debug,
-              date: dateString,
-              tasks: playlist.tasks.map(t => ({
-                id: t.id,
-                title: t.title,
-                completionsCount: t.completions.length
-              }))
-            });
-
-            return (
-              <a
-                key={playlist.id}
-                href={`/playlist/${playlist.id}/${dateString}`}
-                className="card block hover:border-indigo-200 group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-semibold group-hover:text-indigo-600 transition-colors truncate">
-                      {playlist.name}
-                    </h2>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-sm text-gray-500">
-                        {playlist.tasks.length} tasks
+          playlists.map((playlist) => (
+            <a
+              key={playlist.id}
+              href={`/playlist/${playlist.id}/${dateString}`}
+              className="block bg-white rounded-lg border border-gray-200 p-4 hover:border-accent hover:shadow-md transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-poppins font-semibold text-text-primary group-hover:text-primary transition-colors truncate">
+                    {playlist.name}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-text-secondary">
+                      {playlist.tasks.length} tasks
+                    </span>
+                    {playlist.status === 'Completed' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent font-medium">
+                        Completed
                       </span>
-                      {playlist.status === 'Completed' && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
-                          Completed
-                        </span>
-                      )}
-                      {playlist.status === 'In Progress' && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                          In Progress
-                        </span>
-                      )}
-                      {playlist.status === 'Not Started' && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-800">
-                          Not Started
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-4">
-                    <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
-                    </svg>
+                    )}
+                    {playlist.status === 'In Progress' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+                        In Progress
+                      </span>
+                    )}
+                    {playlist.status === 'Not Started' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-text-secondary font-medium">
+                        Not Started
+                      </span>
+                    )}
                   </div>
                 </div>
-              </a>
-            );
-          })
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                  <svg className="h-5 w-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </div>
+            </a>
+          ))
         )}
       </div>
     </main>

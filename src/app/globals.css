@@ -13,11 +13,15 @@
   --color-surface: #ffffff;
   --color-text: #1e293b;
   --color-text-light: #64748b;
+  --font-poppins: 'Poppins', sans-serif;
+  --font-pt-sans: 'PT Sans', sans-serif;
 }
 
 body {
   background: var(--color-background);
   color: var(--color-text);
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer components {
@@ -40,4 +44,48 @@ body {
   .subtitle {
     @apply text-lg text-gray-600;
   }
+}
+
+/* Prevent iOS text size adjustment and zoom */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Set minimum font size for inputs to prevent zoom */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px !important;
+  @apply rounded-md border border-gray-200 bg-white px-3 py-2 text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent;
+}
+
+/* Fix iOS height issues */
+.min-h-screen {
+  min-height: 100vh;
+  /* mobile viewport bug fix */
+  min-height: -webkit-fill-available;
+}
+
+/* Improve touch targets on mobile */
+button, 
+a, 
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Disable text selection on interactive elements */
+button, 
+a, 
+[role="button"],
+.no-select {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 } 
