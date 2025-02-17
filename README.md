@@ -17,7 +17,6 @@ A task management app that helps you organize your daily activities into playlis
 - Tailwind CSS
 - Capacitor
 - SQLite
-- Prisma
 - OpenAI API (for AI task generation)
 
 ## Prerequisites
@@ -26,7 +25,6 @@ A task management app that helps you organize your daily activities into playlis
 - npm or yarn
 - Xcode (for iOS development)
 - CocoaPods
-- PostgreSQL (for development)
 
 ## Setup
 
@@ -45,24 +43,20 @@ npm install
 ```bash
 cp .env.example .env
 ```
-Edit `.env` with your database and OpenAI API credentials.
+Edit `.env` with your OpenAI API key and other configurations.
 
-4. Initialize the database:
-```bash
-npm run prisma:generate
-npm run prisma:migrate
-```
-
-5. Run the development server:
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-6. For iOS development:
+5. For iOS development:
 ```bash
-npm run build
-npx cap sync ios
-npx cap open ios
+# Build and sync with iOS
+npm run ios:sync
+
+# Open in Xcode
+npm run ios:open
 ```
 
 ## Environment Variables
@@ -70,7 +64,6 @@ npx cap open ios
 Create a `.env` file with the following variables:
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/productivity_app"
 NEXT_PUBLIC_API_URL="http://localhost:3000"
 PORT=3000
 OPENAI_API_KEY="your-openai-api-key"
@@ -85,9 +78,17 @@ npm run build
 
 2. For iOS:
 ```bash
-npx cap sync ios
+npm run ios:sync
 ```
 Then open Xcode and build the project.
+
+## iOS Development Notes
+
+- Make sure you have Xcode installed and updated
+- Install CocoaPods if you haven't already: `sudo gem install cocoapods`
+- After running `npm run ios:sync`, open the project in Xcode using `npm run ios:open`
+- In Xcode, select your team and update the bundle identifier if needed
+- Build and run the project in Xcode
 
 ## License
 
